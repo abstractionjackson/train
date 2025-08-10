@@ -62,8 +62,20 @@
                     "description": "The exercise equiptment used, if any",
                     "type": "string",
                     "enum": ["Barbell", "Dumbbells", "Kettlebell", "Cable", "Pulley"]
+                },
+                "aliases": {
+                    "description": "Human-readable names that actual gymgoers would use to denote an exercise",
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "uniqueItems": true,
+                    "minItems": 1
+                },
+                "displayName": {
+                    "description": "The primary alias",
+                    "type": "string"
                 }
-            }
+            },
+            "$comment": "Constraint `displayName is a member of aliases` cannot be expressed in pure draft 2020-12"
         },
         "exercisePerformance": {
             "type": "object",
