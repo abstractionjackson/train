@@ -1,0 +1,98 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/abstractionjackson/train/schema.json",
+    "title": "Train",
+    "description": "A resistance workout chronology",
+    "type": "object",
+    "properties": {
+        "workouts": {
+            "description": "A Workout Performance Chronology",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/workoutPerformance"
+            }
+        },
+        "exercises": {
+            "description": "A collection of exercise templates",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/exerciseTemplate"
+            }
+        }
+    },
+    "$defs": {
+        "workoutPerformance": {
+            "type": "object",
+            "required": ["date"],
+            "properties": {
+                "date": {
+                    "description":  "The date on which the workout was performed",
+                    "type": "string",
+                    "format": "date"
+                },
+                "exercisePerformance": {
+                    "description": "An Exercise Performance Chronology",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/exercisePerformance"
+                    },
+                    "minItems": 1
+                }
+            }
+        },
+        "exerciseTemplate": {
+            "type": "object",
+            "required": ["id", "movement", "position"],
+            "properties": {
+                "id": {
+                    "description": "The unique id of an exercise",
+                    "type": "integer"
+                },
+                "movement": {
+                    "description": "The direction against resistance",
+                    "type": "string",
+                    "enum": ["Push", "Pull"]
+                },
+                "position": {
+                    "description": "The body's spatial orientation",
+                    "type": "string",
+                    "enum": ["Seated", "Standing", "Kneeling", "Supine", "Prone", "Erect", "Hanging"]
+                },
+                "equipment": {
+                    "description": "The exercise equiptment used, if any",
+                    "type": "string",
+                    "enum": ["Barbell", "Dumbbells", "Kettlebell", "Cable", "Pulley"]
+                }
+            }
+        },
+        "exercisePerformance": {
+            "type": "object",
+            "required": ["templateId", "sets", "reps"],
+            "properties": {
+                "templateId": {
+                    "description": "A reference to the exercise performed",
+                    "type": "integer"
+                },
+                "sets": {
+                    "description": "A count of the sets performed",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "reps": {
+                    "description": "A count of the reps per set",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "weight": {
+                    "description": "A number in lbs of the weight, if used",
+                    "type": "number",
+                    "minimum": 1
+                },
+                "notes": {
+                    "description": "A subjective account from the performer",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
