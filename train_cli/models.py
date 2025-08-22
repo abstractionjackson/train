@@ -9,6 +9,7 @@ class ExerciseTemplate:
     movement: str
     position: str
     equipment: Optional[str] = None
+    angle: Optional[float] = None
     aliases: List[str] = field(default_factory=list)
     displayName: Optional[str] = None
 

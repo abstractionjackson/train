@@ -9,6 +9,7 @@ from .storage import Storage
 from . import models
 from .validators import validate_instance, logical_validate, SCHEMA
 import json
+from .prompting import choose, ask_number
 
 app = typer.Typer(help="Manage workout chronology data")
 console = Console()
@@ -29,13 +30,18 @@ def list_exercises():
 def add_exercise():
     data = storage.load()
     next_id = (max((e.id for e in data.exercises), default=0) + 1)
-    movement = Prompt.ask("Movement", choices=["Push","Pull"], default="Push")
-    position = Prompt.ask("Position", choices=["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default="Standing")
-    equipment = Prompt.ask("Equipment (blank for none)", choices=["Barbell","Dumbbells","Kettlebell","Cable","Pulley",""], default="") or None
+    movement = choose("Movement", ["Push","Pull"], default="Push")
+    position = choose("Position", ["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default="Standing")
+    equipment_choice = choose("Equipment (blank for none)", ["", "Barbell","Dumbbells","Kettlebell","Cable","Pulley"], default="", allow_blank=True)
+    equipment = equipment_choice or None
     aliases_raw = Prompt.ask("Aliases (comma separated)")
     aliases = [a.strip() for a in aliases_raw.split(",") if a.strip()]
-    display = Prompt.ask("Display name", choices=aliases, default=aliases[0]) if aliases else None
-    ex = models.ExerciseTemplate(id=next_id, movement=movement, position=position, equipment=equipment, aliases=aliases, displayName=display)
+    display = choose("Display name", aliases, default=aliases[0]) if aliases else None
+    angle = None
+    if position == "Seated":
+        angle_choice = choose("Seat angle (deg)", ["90","60","45","30","0"], default="90")
+        angle = float(angle_choice)
+    ex = models.ExerciseTemplate(id=next_id, movement=movement, position=position, equipment=equipment, angle=angle, aliases=aliases, displayName=display)
     data.exercises.append(ex)
     storage.save(data)
     console.print(f"Added exercise {ex.id} -> {ex.displayName}")
@@ -54,15 +60,22 @@ def update_exercise(exercise_id: int = typer.Argument(..., help="Exercise id to 
     if not ex:
         console.print("Not found")
         raise typer.Exit(1)
-    movement = Prompt.ask("Movement", choices=["Push","Pull"], default=ex.movement)
-    position = Prompt.ask("Position", choices=["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default=ex.position)
+    movement = choose("Movement", ["Push","Pull"], default=ex.movement)
+    position = choose("Position", ["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default=ex.position)
     equipment_choices = ["Barbell","Dumbbells","Kettlebell","Cable","Pulley",""]
-    equipment = Prompt.ask("Equipment (blank for none)", choices=equipment_choices, default=ex.equipment or "") or None
+    equipment_choice = choose("Equipment (blank for none)", ["", "Barbell","Dumbbells","Kettlebell","Cable","Pulley"], default=ex.equipment or "", allow_blank=True)
+    equipment = equipment_choice or None
     aliases_raw = Prompt.ask("Aliases (comma separated)", default=",".join(ex.aliases))
     aliases = [a.strip() for a in aliases_raw.split(",") if a.strip()]
-    display = Prompt.ask("Display name", choices=aliases, default=ex.displayName or (aliases[0] if aliases else "")) if aliases else None
+    display = choose("Display name", aliases, default=ex.displayName or (aliases[0] if aliases else "")) if aliases else None
     ex.movement = movement
     ex.position = position
+    if position == "Seated":
+        default_angle = str(int(ex.angle)) if ex.angle is not None else "90"
+        angle_choice = choose("Seat angle (deg)", ["90","60","45","30","0"], default=default_angle)
+        ex.angle = float(angle_choice)
+    else:
+        ex.angle = None
     ex.equipment = equipment
     ex.aliases = aliases
     ex.displayName = display
@@ -113,7 +126,9 @@ def add_workout():
     chosen: list[int] = []
     pending: list[models.ExercisePerformance] = []
     while True:
-        id_str = Prompt.ask("Add exercise id (blank to finish)", default="")
+        # Exercise id with completion
+        id_choices = [str(i) for i in ex_ids]
+        id_str = choose("Add exercise id (blank to finish)", id_choices, allow_blank=True, default="")
         if not id_str:
             break
         try:
@@ -124,10 +139,10 @@ def add_workout():
         if i not in ex_ids:
             console.print("Unknown id")
             continue
-        sets = IntPrompt.ask("Sets", default=3)
-        reps = IntPrompt.ask("Reps", default=10)
-        weight = Prompt.ask("Weight (blank for none)", default="")
-        weight_val = float(weight) if weight else None
+        sets = int(ask_number("Sets", default=3))
+        reps = int(ask_number("Reps", default=10))
+        weight_num = ask_number("Weight (blank for none)", default=None, allow_blank=True)
+        weight_val = float(weight_num) if weight_num is not None else None
         data_workout = models.ExercisePerformance(templateId=i, sets=sets, reps=reps, weight=weight_val)
         chosen.append(i)
         pending.append(data_workout)
@@ -207,12 +222,12 @@ def update_workout(date_str: str = typer.Argument(..., help="Workout date YYYY-M
     # Add new exercise performances
     while Confirm.ask("Add another exercise performance?", default=False):
         ex_ids = [e.id for e in data.exercises]
-        id_str = Prompt.ask("Exercise id", choices=[str(i) for i in ex_ids])
+        id_str = choose("Exercise id", [str(i) for i in ex_ids])
         i = int(id_str)
-        sets = IntPrompt.ask("Sets", default=3)
-        reps = IntPrompt.ask("Reps", default=10)
-        weight = Prompt.ask("Weight (blank for none)", default="")
-        weight_val = float(weight) if weight else None
+        sets = int(ask_number("Sets", default=3))
+        reps = int(ask_number("Reps", default=10))
+        weight_num = ask_number("Weight (blank for none)", default=None, allow_blank=True)
+        weight_val = float(weight_num) if weight_num is not None else None
         new_eps.append(models.ExercisePerformance(templateId=i, sets=sets, reps=reps, weight=weight_val))
     w.exercisePerformance = new_eps
     storage.save(data)
