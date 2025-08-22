@@ -9,7 +9,7 @@ from .storage import Storage
 from . import models
 from .validators import validate_instance, logical_validate, SCHEMA
 import json
-from .prompting import choose, ask_number
+from .prompting import choose, ask_number, pick_date
 
 app = typer.Typer(help="Manage workout chronology data")
 console = Console()
@@ -108,13 +108,11 @@ def list_cmd(
 
 def add_workout():
     data = storage.load()
-    today_str = date.today().isoformat()
-    # Use console.input to avoid stray control characters being echoed (e.g. ^M) and handle empty input manually
-    raw = console.input(f"Date (YYYY-MM-DD) [{today_str}]: ").strip()
-    if not raw:
-        d_str = today_str
-    else:
-        d_str = raw
+    picked = pick_date(date.today())
+    if picked is None:
+        console.print("Cancelled")
+        raise typer.Exit()
+    d_str = picked.isoformat()
     try:
         d = date.fromisoformat(d_str)
     except ValueError:
