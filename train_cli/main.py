@@ -179,17 +179,30 @@ def delete_workout(date_str: str = typer.Argument(..., help="Workout date YYYY-M
 @app.command(name="delete")
 def delete_cmd(
     entity: str = typer.Argument(..., metavar="exercise|workout", case_sensitive=False),
-    key: str = typer.Argument(..., help="For exercise: id; For workout: YYYY-MM-DD"),
+    key: str | None = typer.Argument(None),
 ):
     entity_l = entity.lower()
     if entity_l in ("exercise", "exercises"):
-        try:
-            ex_id = int(key)
-        except ValueError:
-            console.print("Exercise id must be an integer.")
+        data = storage.load()
+        choices = [e.displayName for e in data.exercises if e.displayName]
+        if not choices:
+            console.print("No exercises with a display name found to delete.")
             raise typer.Exit(1)
-        delete_exercise(ex_id)
+        name = choose("Exercise to delete (display name)", choices)
+        before = len(data.exercises)
+        data.exercises = [e for e in data.exercises if (e.displayName or "").strip().lower() != str(name).strip().lower()]
+        after = len(data.exercises)
+        storage.save(data)
+        console.print("Deleted" if after < before else "No change")
     elif entity_l in ("workout", "workouts"):
+        # If no key provided, prompt for a date from existing workouts
+        if key is None:
+            data = storage.load()
+            dates = [w.date.isoformat() for w in data.workouts]
+            if not dates:
+                console.print("No workouts found.")
+                raise typer.Exit(1)
+            key = choose("Workout date to delete", dates)
         delete_workout(key)
     else:
         console.print("Unknown entity. Use 'exercise' or 'workout'.")
@@ -237,17 +250,46 @@ def update_workout(date_str: str = typer.Argument(..., help="Workout date YYYY-M
 @app.command(name="update")
 def update_cmd(
     entity: str = typer.Argument(..., metavar="exercise|workout", case_sensitive=False),
-    key: str = typer.Argument(..., help="For exercise: id; For workout: YYYY-MM-DD"),
+    key: str | None = typer.Argument(None),
 ):
     entity_l = entity.lower()
     if entity_l in ("exercise", "exercises"):
-        try:
-            ex_id = int(key)
-        except ValueError:
-            console.print("Exercise id must be an integer.")
+        data = storage.load()
+        # If key provided, allow id or display name; otherwise prompt by display name
+        ex_id: int | None = None
+        if key is None:
+            names = [e.displayName for e in data.exercises if e.displayName]
+            if not names:
+                console.print("No exercises found.")
+                raise typer.Exit(1)
+            chosen = choose("Exercise to update (display name)", names)
+            # map to id (first match ignoring case)
+            for e in data.exercises:
+                if (e.displayName or "").strip().lower() == str(chosen).strip().lower():
+                    ex_id = e.id
+                    break
+        else:
+            # try id first
+            try:
+                ex_id = int(key)
+            except ValueError:
+                # treat as display name
+                for e in data.exercises:
+                    if (e.displayName or "").strip().lower() == key.strip().lower():
+                        ex_id = e.id
+                        break
+        if ex_id is None:
+            console.print("Exercise not found.")
             raise typer.Exit(1)
         update_exercise(ex_id)
     elif entity_l in ("workout", "workouts"):
+        if key is None:
+            data = storage.load()
+            dates = [w.date.isoformat() for w in data.workouts]
+            if not dates:
+                console.print("No workouts found.")
+                raise typer.Exit(1)
+            key = choose("Workout date to update", dates)
         update_workout(key)
     else:
         console.print("Unknown entity. Use 'exercise' or 'workout'.")
