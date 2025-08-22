@@ -32,15 +32,15 @@ def add_exercise():
     next_id = (max((e.id for e in data.exercises), default=0) + 1)
     movement = choose("Movement", ["Push","Pull"], default="Push")
     position = choose("Position", ["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default="Standing")
+    # Ask for angle immediately if seated
+    angle = None
+    if position == "Seated":
+        angle = choose("Seat angle (deg)", [90, 60, 45, 30, 0], default=90)
     equipment_choice = choose("Equipment (blank for none)", ["", "Barbell","Dumbbells","Kettlebell","Cable","Pulley"], default="", allow_blank=True)
     equipment = equipment_choice or None
     aliases_raw = Prompt.ask("Aliases (comma separated)")
     aliases = [a.strip() for a in aliases_raw.split(",") if a.strip()]
     display = choose("Display name", aliases, default=aliases[0]) if aliases else None
-    angle = None
-    if position == "Seated":
-        angle_choice = choose("Seat angle (deg)", ["90","60","45","30","0"], default="90")
-        angle = float(angle_choice)
     ex = models.ExerciseTemplate(id=next_id, movement=movement, position=position, equipment=equipment, angle=angle, aliases=aliases, displayName=display)
     data.exercises.append(ex)
     storage.save(data)
@@ -62,6 +62,12 @@ def update_exercise(exercise_id: int = typer.Argument(..., help="Exercise id to 
         raise typer.Exit(1)
     movement = choose("Movement", ["Push","Pull"], default=ex.movement)
     position = choose("Position", ["Seated","Standing","Kneeling","Supine","Prone","Erect","Hanging"], default=ex.position)
+    # Ask for angle immediately if seated (compute now, assign later)
+    if position == "Seated":
+        default_angle = int(ex.angle) if ex.angle is not None else 90
+        new_angle = choose("Seat angle (deg)", [90, 60, 45, 30, 0], default=default_angle)
+    else:
+        new_angle = None
     equipment_choices = ["Barbell","Dumbbells","Kettlebell","Cable","Pulley",""]
     equipment_choice = choose("Equipment (blank for none)", ["", "Barbell","Dumbbells","Kettlebell","Cable","Pulley"], default=ex.equipment or "", allow_blank=True)
     equipment = equipment_choice or None
@@ -70,12 +76,7 @@ def update_exercise(exercise_id: int = typer.Argument(..., help="Exercise id to 
     display = choose("Display name", aliases, default=ex.displayName or (aliases[0] if aliases else "")) if aliases else None
     ex.movement = movement
     ex.position = position
-    if position == "Seated":
-        default_angle = str(int(ex.angle)) if ex.angle is not None else "90"
-        angle_choice = choose("Seat angle (deg)", ["90","60","45","30","0"], default=default_angle)
-        ex.angle = float(angle_choice)
-    else:
-        ex.angle = None
+    ex.angle = new_angle
     ex.equipment = equipment
     ex.aliases = aliases
     ex.displayName = display

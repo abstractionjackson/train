@@ -40,15 +40,25 @@ class Storage:
         return models.RootData(workouts=workouts, exercises=exercises)
 
     def save(self, root: models.RootData) -> None:
+        def strip_none(d: Dict[str, Any]) -> Dict[str, Any]:
+            return {k: v for k, v in d.items() if v is not None}
+
+        exercises_serialized = []
+        for e in root.exercises:
+            d = strip_none(e.__dict__)
+            if d.get("position") == "Seated" and "angle" not in d:
+                d["angle"] = 90
+            exercises_serialized.append(d)
+
         data = {
             "workouts": [
                 {
                     "date": w.date.isoformat(),
-                    "exercisePerformance": [ep.__dict__ for ep in w.exercisePerformance],
+                    "exercisePerformance": [strip_none(ep.__dict__) for ep in w.exercisePerformance],
                 }
                 for w in root.workouts
             ],
-            "exercises": [e.__dict__ for e in root.exercises],
+            "exercises": exercises_serialized,
         }
         # Validate before persisting
         validate_instance(data)
