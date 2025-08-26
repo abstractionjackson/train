@@ -25,6 +25,7 @@ class ExercisePerformance:
 class WorkoutPerformance:
     date: date
     exercisePerformance: List[ExercisePerformance] = field(default_factory=list)
+    intendedExercisePerformance: List[ExercisePerformance] = field(default_factory=list)
 
 @dataclass
 class RootData:

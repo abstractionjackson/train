@@ -34,6 +34,9 @@ class Storage:
                     exercisePerformance=[
                         models.ExercisePerformance(**ep) for ep in w.get("exercisePerformance", [])
                     ],
+                    intendedExercisePerformance=[
+                        models.ExercisePerformance(**ep) for ep in w.get("intendedExercisePerformance", [])
+                    ],
                 )
             )
         exercises = [models.ExerciseTemplate(**e) for e in raw.get("exercises", [])]
@@ -55,6 +58,7 @@ class Storage:
                 {
                     "date": w.date.isoformat(),
                     "exercisePerformance": [strip_none(ep.__dict__) for ep in w.exercisePerformance],
+                    **({"intendedExercisePerformance": [strip_none(ep.__dict__) for ep in w.intendedExercisePerformance]} if getattr(w, "intendedExercisePerformance", None) else {}),
                 }
                 for w in root.workouts
             ],

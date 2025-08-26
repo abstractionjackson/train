@@ -32,13 +32,19 @@
                     "type": "string",
                     "format": "date"
                 },
+                "intendedExercisePerformance": {
+                    "description": "A sequence of intended exercises, in the order they were planned",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/exercisePerformance"
+                    }
+                },
                 "exercisePerformance": {
                     "description": "An Exercise Performance Chronology",
                     "type": "array",
                     "items": {
                         "$ref": "#/$defs/exercisePerformance"
-                    },
-                    "minItems": 1
+                    }
                 }
             }
         },
