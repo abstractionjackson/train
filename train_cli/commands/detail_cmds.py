@@ -89,3 +89,50 @@ def detail_exercise_history(exercise_id: int):
         weight_str = "-" if ep.weight is None else str(ep.weight)
         table.add_row(pretty_date, weight_str, str(ep.sets), str(ep.reps))
     console.print(table)
+
+def detail_performance_by_name(exercise_name: str):
+    """Show performance history for an exercise by name (displayName or alias)."""
+    data = storage.load()
+    # Find exercise by name
+    target_exercise = None
+    for e in data.exercises:
+        if e.displayName and e.displayName.lower() == exercise_name.lower():
+            target_exercise = e
+            break
+        for alias in e.aliases:
+            if alias.lower() == exercise_name.lower():
+                target_exercise = e
+                break
+        if target_exercise:
+            break
+    
+    if not target_exercise:
+        console.print(f"Exercise '{exercise_name}' not found")
+        raise typer.Exit(1)
+    
+    # Collect (date, ep) pairs for matching templateId
+    rows = []
+    for w in data.workouts:
+        for ep in w.exercisePerformance:
+            if ep.templateId == target_exercise.id:
+                rows.append((w.date, ep))
+    
+    if not rows:
+        console.print(f"No performance history found for {target_exercise.displayName or exercise_name}")
+        return
+    
+    # Sort by date descending
+    rows.sort(key=lambda r: r[0], reverse=True)
+    title = f"Performance History: {target_exercise.displayName or exercise_name}"
+    table = Table(title=title)
+    table.add_column("Date")
+    table.add_column("Weight")
+    table.add_column("Sets", justify="right")
+    table.add_column("Reps", justify="right")
+    
+    for d, ep in rows:
+        pretty_date = f"{d.month}/{d.day}"
+        weight_str = "-" if ep.weight is None else str(ep.weight)
+        table.add_row(pretty_date, weight_str, str(ep.sets), str(ep.reps))
+    
+    console.print(table)

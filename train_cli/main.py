@@ -24,6 +24,7 @@ from .commands.workout_cmds import (
 from .commands.detail_cmds import (
     detail_exercise_by_id,
     detail_workout_by_date,
+    detail_performance_by_name,
 )
 
 app = typer.Typer(help="Manage workout chronology data")
@@ -130,7 +131,7 @@ def validate():
 
 @app.command(name="detail")
 def detail_cmd(
-    entity: str = typer.Argument(..., metavar="exercise|workout", case_sensitive=False),
+    entity: str = typer.Argument(..., metavar="exercise|workout|performance", case_sensitive=False),
     key: str | None = typer.Argument(None),
     history: bool = typer.Option(False, "--history", "--hist", help="Show exercise performance history across workouts"),
 ):
@@ -145,8 +146,13 @@ def detail_cmd(
     elif entity_l in ("workout", "workouts"):
         key = resolve_workout_date_key(key)
         detail_workout_by_date(key)
+    elif entity_l in ("performance",):
+        if not key:
+            console.print("Exercise name required for performance detail")
+            raise typer.Exit(1)
+        detail_performance_by_name(key)
     else:
-        console.print("Unknown entity. Use 'exercise' or 'workout'.")
+        console.print("Unknown entity. Use 'exercise', 'workout', or 'performance'.")
         raise typer.Exit(1)
 
 if __name__ == "__main__":
